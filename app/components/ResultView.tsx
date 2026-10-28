@@ -9,6 +9,8 @@ import type { AnalyzeResult, Source, Verdict } from "@/lib/types";
 
 interface Props {
   result: AnalyzeResult | null;
+  /** 분석 중이면 결과 자리에 진행 안내를 보여 준다 (PLAN 작업 15) */
+  loading: boolean;
 }
 
 /** 영향 판정마다 배지 색을 다르게 해 한눈에 구분되게 한다 */
@@ -19,7 +21,20 @@ const VERDICT_STYLE: Record<Verdict, string> = {
   "판단 보류": "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
 };
 
-export default function ResultView({ result }: Props) {
+export default function ResultView({ result, loading }: Props) {
+  if (loading) {
+    return (
+      <section
+        aria-label="분석 결과"
+        aria-busy
+        className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-blue-300 p-6 text-center text-sm text-blue-900 dark:border-blue-800 dark:text-blue-200"
+      >
+        <span aria-hidden className="h-6 w-6 animate-spin rounded-full border-2 border-blue-200 border-t-blue-800 dark:border-blue-900 dark:border-t-blue-300" />
+        <p role="status">AI가 원문을 읽고 요약과 영향 분석을 만들고 있습니다. 보통 5~15초 걸립니다.</p>
+      </section>
+    );
+  }
+
   if (!result) {
     return (
       <section

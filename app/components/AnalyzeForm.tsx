@@ -4,21 +4,31 @@
 // PLAN 작업 4: "분석하기"를 누르면 입력을 모아 부모(page)에게 넘긴다. 실제 API 호출은 page가 한다.
 // PLAN 작업 6: 입력창 아래에 공개 자료만 넣으라는 안내 문구를 둔다 (PRD 7번, DESIGN §5.1 구역 4).
 // PLAN 작업 8: "원문 붙여넣기"와 "링크 입력" 중 하나를 고르게 한다. 탭을 바꿔도 적어 둔 내용은 남는다.
+// PLAN 작업 15: 분석 중에는 버튼을 "분석 중…"으로 바꾸고 막는다.
+//   페이지가 다 열리기 전(화면 코드가 붙기 전)에도 버튼을 막아, 눌렀을 때 새로고침되는 일을 없앤다.
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { FIELDS, MAX_TEXT_LENGTH, type AnalyzeRequest, type Field, type InputMode } from "@/lib/types";
 
 interface Props {
   /** 입력을 모아 분석을 요청한다 */
   onSubmit: (request: AnalyzeRequest) => void;
+  /** 분석 중이면 true */
+  loading: boolean;
 }
+
+/** 바뀔 일이 없는 값이라 구독할 것도 없다 */
+const subscribeNothing = () => () => {};
 
 const MODE_TABS: { mode: InputMode; label: string }[] = [
   { mode: "text", label: "원문 붙여넣기" },
   { mode: "url", label: "링크 입력" },
 ];
 
-export default function AnalyzeForm({ onSubmit }: Props) {
+export default function AnalyzeForm({ onSubmit, loading }: Props) {
+  // 서버에서 그린 첫 화면에서는 false, 브라우저에서 화면 코드가 붙은 뒤 true
+  const ready = useSyncExternalStore(subscribeNothing, () => true, () => false);
+
   const [mode, setMode] = useState<InputMode>("text");
   const [text, setText] = useState("");
   const [sourceLabel, setSourceLabel] = useState("");
@@ -156,9 +166,14 @@ export default function AnalyzeForm({ onSubmit }: Props) {
 
       <button
         type="submit"
-        className="h-12 rounded-lg bg-blue-900 text-base font-semibold text-white transition-colors hover:bg-blue-800"
+        disabled={!ready || loading}
+        aria-busy={loading}
+        className="flex h-12 items-center justify-center gap-2 rounded-lg bg-blue-900 text-base font-semibold text-white transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-blue-900/60"
       >
-        분석하기
+        {loading && (
+          <span aria-hidden className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+        )}
+        {loading ? "분석 중…" : "분석하기"}
       </button>
     </form>
   );
