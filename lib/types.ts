@@ -71,6 +71,15 @@ export interface AnalyzeResult {
 /** 오류 코드 (DESIGN §6) */
 export type ErrorCode = "TOO_SHORT" | "TOO_LONG" | "INVALID_URL" | "FETCH_FAILED" | "AI_FAILED";
 
+/** 오류마다 사용자에게 보여 줄 문장 (DESIGN §6). 화면과 서버가 같은 문장을 쓴다 */
+export const ERROR_MESSAGES: Record<ErrorCode, string> = {
+  TOO_SHORT: `자료가 너무 짧습니다. ${MIN_TEXT_LENGTH}자 이상 입력해 주세요.`,
+  TOO_LONG: `자료가 너무 깁니다. ${MAX_TEXT_LENGTH.toLocaleString()}자 이하로 나눠서 넣어 주세요.`,
+  INVALID_URL: "올바른 링크(http 또는 https)를 입력해 주세요.",
+  FETCH_FAILED: "링크 내용을 가져오지 못했습니다. 원문을 붙여넣어 주세요.",
+  AI_FAILED: "분석 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.",
+};
+
 /** 서버 → 브라우저: 분석 실패 응답 */
 export interface AnalyzeError {
   error: {

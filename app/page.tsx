@@ -2,9 +2,17 @@
 
 // Design Ref: §5.1 — 화면 전체 배치. 위에서 아래로 머리 → 입력 폼 → 결과 영역.
 // PLAN 작업 4: 폼의 입력을 받아 /api/analyze를 부르고, 받은 결과를 결과 영역에 넘긴다.
+// PLAN 작업 7: 원문 길이를 먼저 확인해, 짧거나 길면 서버로 보내지 않고 바로 안내한다 (DESIGN §2.2 단계 2).
 
 import { useState } from "react";
-import type { AnalyzeError, AnalyzeRequest, AnalyzeResult } from "@/lib/types";
+import {
+  ERROR_MESSAGES,
+  MAX_TEXT_LENGTH,
+  MIN_TEXT_LENGTH,
+  type AnalyzeError,
+  type AnalyzeRequest,
+  type AnalyzeResult,
+} from "@/lib/types";
 import AnalyzeForm from "./components/AnalyzeForm";
 import ResultView from "./components/ResultView";
 
@@ -14,6 +22,17 @@ export default function Home() {
 
   async function analyze(request: AnalyzeRequest) {
     setError(null);
+
+    if (request.mode === "text") {
+      // 서버와 같은 기준(앞뒤 공백 제외)으로 센다
+      const length = (request.text ?? "").trim().length;
+      if (length < MIN_TEXT_LENGTH || length > MAX_TEXT_LENGTH) {
+        setResult(null);
+        setError(ERROR_MESSAGES[length < MIN_TEXT_LENGTH ? "TOO_SHORT" : "TOO_LONG"]);
+        return;
+      }
+    }
+
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",

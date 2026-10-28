@@ -1,12 +1,20 @@
 // Design Ref: §4 — POST /api/analyze. 입력을 받아 AnalyzeResult 모양으로 돌려준다.
 // PLAN 작업 2: 지금은 AI 없이 고정된 예시 결과를 돌려주는 뼈대다.
-// 입력 검사(작업 7), 링크 본문(작업 9), AI 호출(작업 10~13)은 이후 작업에서 이 자리에 붙인다.
+// PLAN 작업 7: 예시 결과를 돌려주기 전에 입력 길이를 검사한다.
+// 링크 본문(작업 9), AI 호출(작업 10~13)은 이후 작업에서 이 자리에 붙인다.
 
 import { NO_SOURCE_LABEL, type AnalyzeRequest, type AnalyzeResult, type Source } from "@/lib/types";
+import { validateRequest } from "@/lib/validate";
 
 export async function POST(request: Request) {
-  // 본문이 JSON이 아니어도 뼈대 단계에서는 예시 결과를 돌려준다 (형식 검사는 작업 7에서 추가)
-  const body = (await request.json().catch(() => ({}))) as Partial<AnalyzeRequest>;
+  // JSON이 아니면 빈 입력으로 보고 검사에서 걸러지게 한다
+  const parsed: unknown = await request.json().catch(() => ({}));
+  const body = (parsed && typeof parsed === "object" ? parsed : {}) as Partial<AnalyzeRequest>;
+
+  const invalid = validateRequest(body);
+  if (invalid) {
+    return Response.json(invalid, { status: 400 });
+  }
 
   return Response.json(sampleResult(body));
 }
