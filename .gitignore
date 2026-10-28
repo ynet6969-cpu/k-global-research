@@ -35,6 +35,11 @@ yarn-error.log*
 # 값 없이 변수 이름만 적은 예시 파일은 올린다
 !.env.example
 
+# bkit 플러그인 작업 기록 (CHECK #16), 파일 정리용 휴지통 폴더, Office가 문서를 열 때 만드는 임시 파일
+/.bkit/
+/trash-can/
+~$*
+
 # vercel
 .vercel
 
