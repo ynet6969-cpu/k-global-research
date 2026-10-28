@@ -12,6 +12,10 @@ export type Field = (typeof FIELDS)[number];
 export const MIN_TEXT_LENGTH = 200;
 export const MAX_TEXT_LENGTH = 20000;
 
+/** 출처·직접 입력 분야의 최대 길이 (CHECK #1: 아주 긴 값으로 AI 요금이 늘어나는 것을 막음) */
+export const MAX_SOURCE_LABEL_LENGTH = 200;
+export const MAX_CUSTOM_FIELD_LENGTH = 30;
+
 /** 출처를 비웠을 때 화면에 보여 줄 문구 (PLAN 확정 사항 1) */
 export const NO_SOURCE_LABEL = "출처 미입력";
 
@@ -69,13 +73,21 @@ export interface AnalyzeResult {
 }
 
 /** 오류 코드 (DESIGN §6) */
-export type ErrorCode = "TOO_SHORT" | "TOO_LONG" | "INVALID_URL" | "FETCH_FAILED" | "AI_FAILED" | "RATE_LIMITED";
+export type ErrorCode =
+  | "TOO_SHORT"
+  | "TOO_LONG"
+  | "INVALID_URL"
+  | "INVALID_INPUT"
+  | "FETCH_FAILED"
+  | "AI_FAILED"
+  | "RATE_LIMITED";
 
 /** 오류마다 사용자에게 보여 줄 문장 (DESIGN §6). 화면과 서버가 같은 문장을 쓴다 */
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   TOO_SHORT: `자료가 너무 짧습니다. ${MIN_TEXT_LENGTH}자 이상 입력해 주세요.`,
   TOO_LONG: `자료가 너무 깁니다. ${MAX_TEXT_LENGTH.toLocaleString()}자 이하로 나눠서 넣어 주세요.`,
   INVALID_URL: "올바른 링크(http 또는 https)를 입력해 주세요.",
+  INVALID_INPUT: `입력값을 확인해 주세요. 출처는 ${MAX_SOURCE_LABEL_LENGTH}자, 직접 입력하는 관심 분야는 ${MAX_CUSTOM_FIELD_LENGTH}자까지 쓸 수 있습니다.`,
   FETCH_FAILED: "링크 내용을 가져오지 못했습니다. 원문을 붙여넣어 주세요.",
   AI_FAILED: "분석 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.",
   RATE_LIMITED: "짧은 시간에 분석을 너무 많이 요청했습니다. 잠시 후 다시 시도해 주세요.",

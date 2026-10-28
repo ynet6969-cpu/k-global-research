@@ -8,7 +8,15 @@
 //   페이지가 다 열리기 전(화면 코드가 붙기 전)에도 버튼을 막아, 눌렀을 때 새로고침되는 일을 없앤다.
 
 import { useState, useSyncExternalStore } from "react";
-import { FIELDS, MAX_TEXT_LENGTH, type AnalyzeRequest, type Field, type InputMode } from "@/lib/types";
+import {
+  FIELDS,
+  MAX_CUSTOM_FIELD_LENGTH,
+  MAX_SOURCE_LABEL_LENGTH,
+  MAX_TEXT_LENGTH,
+  type AnalyzeRequest,
+  type Field,
+  type InputMode,
+} from "@/lib/types";
 
 interface Props {
   /** 입력을 모아 분석을 요청한다 */
@@ -103,6 +111,7 @@ export default function AnalyzeForm({ onSubmit, loading }: Props) {
                 id="source"
                 value={sourceLabel}
                 onChange={(e) => setSourceLabel(e.target.value)}
+                maxLength={MAX_SOURCE_LABEL_LENGTH}
                 placeholder="예: 미국 연방준비제도 보도자료"
                 className="w-full rounded-lg border border-zinc-300 bg-white p-3 text-sm focus:border-blue-700 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900"
               />
@@ -157,6 +166,7 @@ export default function AnalyzeForm({ onSubmit, loading }: Props) {
               aria-label="관심 분야 직접 입력"
               value={customField}
               onChange={(e) => setCustomField(e.target.value)}
+              maxLength={MAX_CUSTOM_FIELD_LENGTH}
               placeholder="예: 반도체 산업"
               className="flex-1 rounded-lg border border-zinc-300 bg-white p-3 text-sm focus:border-blue-700 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900"
             />
