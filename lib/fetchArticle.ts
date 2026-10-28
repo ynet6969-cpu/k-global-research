@@ -143,18 +143,21 @@ function extractTitle(html: string): string | undefined {
   return title ? decodeEntities(title).replace(/\s+/g, " ").trim() || undefined : undefined;
 }
 
+/** HTML 태그 하나. 속성 값 안의 ">"(예: data-x='{"a":">"}')에서 태그가 끝난 것으로 잘못 보지 않게 따옴표를 건너뛴다 */
+const TAG = /<(?:[^>"']|"[^"]*"|'[^']*')*>/g;
+
 /** HTML에서 메뉴·스크립트를 빼고 본문 글자만 남긴다. <article>이나 <main>이 있으면 그 안만 쓴다 */
 function htmlToText(html: string): string {
   let body = html.replace(/<!--[\s\S]*?-->/g, "");
   body = body.replace(/<(script|style|noscript|template|svg|iframe|nav|header|footer|aside|form)\b[\s\S]*?<\/\1>/gi, " ");
 
   const main = body.match(/<article\b[\s\S]*?<\/article>/i)?.[0] ?? body.match(/<main\b[\s\S]*?<\/main>/i)?.[0];
-  if (main && main.replace(/<[^>]+>/g, "").trim().length >= MIN_TEXT_LENGTH) body = main;
+  if (main && main.replace(TAG, "").trim().length >= MIN_TEXT_LENGTH) body = main;
 
   body = body
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|li|h[1-6]|tr|blockquote|section|article)>/gi, "\n")
-    .replace(/<[^>]+>/g, " ");
+    .replace(TAG, " ");
 
   return normalizeText(decodeEntities(body));
 }
@@ -169,7 +172,11 @@ function normalizeText(text: string): string {
 }
 
 function decodeEntities(text: string): string {
-  const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+  const named: Record<string, string> = {
+    amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+    ndash: "–", mdash: "—", lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”", hellip: "…",
+    middot: "·", bull: "•", copy: "©", reg: "®", trade: "™", euro: "€", pound: "£", yen: "¥", deg: "°", times: "×",
+  };
   return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, entity: string) => {
     if (entity[0] === "#") {
       const code = entity[1].toLowerCase() === "x" ? parseInt(entity.slice(2), 16) : parseInt(entity.slice(1), 10);
