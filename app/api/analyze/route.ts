@@ -7,6 +7,7 @@
 
 import {
   ERROR_MESSAGES,
+  MAX_SOURCE_LABEL_LENGTH,
   MAX_TEXT_LENGTH,
   NO_SOURCE_LABEL,
   type AnalyzeError,
@@ -59,7 +60,12 @@ export async function POST(request: Request) {
       return errorResponse(article.code, article.code === "INVALID_URL" ? 400 : 502);
     }
     text = article.text;
-    source = { label: article.title ?? article.finalUrl, url: article.finalUrl };
+    // 제목이 없으면 주소를 이름으로 쓴다. 긴 주소도 출처 칸과 같은 길이로 줄인다 (CHECK #2)
+    const label = article.title ?? article.finalUrl;
+    source = {
+      label: label.length > MAX_SOURCE_LABEL_LENGTH ? label.slice(0, MAX_SOURCE_LABEL_LENGTH - 1) + "…" : label,
+      url: article.finalUrl,
+    };
     if (article.truncated) {
       warnings.push(`본문이 길어 앞부분 ${MAX_TEXT_LENGTH.toLocaleString()}자만 분석했습니다.`);
     }

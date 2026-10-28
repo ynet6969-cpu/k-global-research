@@ -51,8 +51,11 @@ export function checkTextLength(text: unknown): AnalyzeError | null {
   return null;
 }
 
+/** 링크 길이 상한. 보통 주소는 수백 자 이내다 (아주 긴 주소가 출처 이름으로 쓰이는 것을 막음) */
+const MAX_URL_LENGTH = 2000;
+
 function isWebUrl(value: unknown): boolean {
-  if (typeof value !== "string") return false;
+  if (typeof value !== "string" || value.length > MAX_URL_LENGTH) return false;
   try {
     const { protocol } = new URL(value.trim());
     return protocol === "http:" || protocol === "https:";

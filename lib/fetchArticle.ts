@@ -9,7 +9,7 @@ import http from "node:http";
 import https from "node:https";
 import { BlockList, isIP } from "node:net";
 import { brotliDecompressSync, gunzipSync, inflateSync } from "node:zlib";
-import { MAX_TEXT_LENGTH, MIN_TEXT_LENGTH, type ErrorCode } from "./types";
+import { MAX_SOURCE_LABEL_LENGTH, MAX_TEXT_LENGTH, MIN_TEXT_LENGTH, type ErrorCode } from "./types";
 
 /** 링크 하나를 가져오는 데 기다리는 최대 시간 (주소 조회·리다이렉트까지 모두 포함) */
 const FETCH_TIMEOUT_MS = 10_000;
@@ -224,9 +224,16 @@ function decode(bytes: Uint8Array, contentType: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-function extractTitle(html: string): string | undefined {
+/**
+ * 페이지 제목을 출처 이름으로 쓴다. 제목은 AI 지시문과 요약 줄마다 들어가므로
+ * 출처 입력칸과 같은 200자로 자른다 (CHECK #2: 수 MB짜리 제목으로 AI 요금이 늘고 화면이 깨지는 것을 막음).
+ */
+export function extractTitle(html: string): string | undefined {
   const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
-  return title ? decodeEntities(title).replace(/\s+/g, " ").trim() || undefined : undefined;
+  if (!title) return undefined;
+  const clean = decodeEntities(title.slice(0, MAX_SOURCE_LABEL_LENGTH * 4)).replace(/\s+/g, " ").trim();
+  if (!clean) return undefined;
+  return clean.length > MAX_SOURCE_LABEL_LENGTH ? clean.slice(0, MAX_SOURCE_LABEL_LENGTH - 1) + "…" : clean;
 }
 
 /** HTML 태그 하나. 속성 값 안의 ">"(예: data-x='{"a":">"}')에서 태그가 끝난 것으로 잘못 보지 않게 따옴표를 건너뛴다 */
