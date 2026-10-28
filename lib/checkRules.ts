@@ -48,14 +48,16 @@ function checkSummary(lines: { text: string }[], sourceText: string, sourceLabel
       continue;
     }
 
-    // 원문에 없는 숫자가 하나라도 있으면 그 줄을 뺀다
+    // 60자를 넘으면 숫자가 잘리지 않게 단어 사이에서 줄인다 (Gap 4: "1,385"가 "1,3…"이 되던 문제)
+    if (text.length > MAX_LINE_LENGTH) {
+      text = shortenAtWord(text, MAX_LINE_LENGTH);
+      trimmed++;
+    }
+
+    // 줄인 뒤의 글자로 검사한다: 원문에 없는 숫자가 하나라도 있으면 그 줄을 뺀다
     if (numbersIn(text).some((n) => !sourceNumbers.has(n))) {
       invented++;
       continue;
-    }
-    if (text.length > MAX_LINE_LENGTH) {
-      text = text.slice(0, MAX_LINE_LENGTH - 1) + "…";
-      trimmed++;
     }
     kept.push({ text });
   }
@@ -68,6 +70,17 @@ function checkSummary(lines: { text: string }[], sourceText: string, sourceLabel
     kept.length = MAX_SUMMARY_LINES;
   }
   return attachSources(kept, sourceLabel);
+}
+
+/**
+ * 끝에 "…"을 붙여 max자 안에 들어가게 줄인다. 가능하면 마지막 띄어쓰기에서 자르고,
+ * 띄어쓰기가 없어 중간에서 잘라야 하면 끝에 남은 숫자 조각(예: "1,3")을 지운다.
+ */
+export function shortenAtWord(text: string, max: number): string {
+  const room = text.slice(0, max - 1);
+  const lastSpace = room.lastIndexOf(" ");
+  const cut = lastSpace >= max / 3 ? room.slice(0, lastSpace) : room.replace(/[\d.,~%\-]+$/, "");
+  return cut.trimEnd() + "…";
 }
 
 /**

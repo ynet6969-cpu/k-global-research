@@ -20,6 +20,10 @@ import { fetchArticle } from "@/lib/fetchArticle";
 import { callAiJson } from "@/lib/ai";
 import { ANALYSIS_SCHEMA, buildAnalysisMessages, type AiAnalysis } from "@/lib/prompts";
 import { checkAnalysis } from "@/lib/checkRules";
+import { clientKeyOf, createRateLimiter } from "@/lib/rateLimit";
+
+/** 분석 요청 횟수 제한 (Gap 3). 서버가 켜져 있는 동안 기억한다 */
+const limiter = createRateLimiter();
 
 /** Vercel에서 이 API가 실행될 수 있는 최대 시간(초). 링크 가져오기 10초 + AI 60초를 넉넉히 덮는다 */
 export const maxDuration = 90;
@@ -32,6 +36,16 @@ export async function POST(request: Request) {
   const invalid = validateRequest(body);
   if (invalid) {
     return Response.json(invalid, { status: 400 });
+  }
+
+  // 링크 가져오기·AI 호출처럼 비용이 드는 일을 하기 전에 횟수를 센다 (잘못된 입력은 세지 않는다)
+  const waitSeconds = limiter.take(clientKeyOf(request));
+  if (waitSeconds > 0) {
+    const minutes = Math.ceil(waitSeconds / 60);
+    const error: AnalyzeError = {
+      error: { code: "RATE_LIMITED", message: `짧은 시간에 분석을 너무 많이 요청했습니다. 약 ${minutes}분 후 다시 시도해 주세요.` },
+    };
+    return Response.json(error, { status: 429, headers: { "Retry-After": String(waitSeconds) } });
   }
 
   let text: string;

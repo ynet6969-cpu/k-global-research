@@ -69,7 +69,7 @@ export interface AnalyzeResult {
 }
 
 /** 오류 코드 (DESIGN §6) */
-export type ErrorCode = "TOO_SHORT" | "TOO_LONG" | "INVALID_URL" | "FETCH_FAILED" | "AI_FAILED";
+export type ErrorCode = "TOO_SHORT" | "TOO_LONG" | "INVALID_URL" | "FETCH_FAILED" | "AI_FAILED" | "RATE_LIMITED";
 
 /** 오류마다 사용자에게 보여 줄 문장 (DESIGN §6). 화면과 서버가 같은 문장을 쓴다 */
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
@@ -78,6 +78,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   INVALID_URL: "올바른 링크(http 또는 https)를 입력해 주세요.",
   FETCH_FAILED: "링크 내용을 가져오지 못했습니다. 원문을 붙여넣어 주세요.",
   AI_FAILED: "분석 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.",
+  RATE_LIMITED: "짧은 시간에 분석을 너무 많이 요청했습니다. 잠시 후 다시 시도해 주세요.",
 };
 
 /** 서버 → 브라우저: 분석 실패 응답 */
