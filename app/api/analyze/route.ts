@@ -2,7 +2,8 @@
 // PLAN 작업 7: 먼저 입력 길이를 검사한다.
 // PLAN 작업 9: 링크 방식이면 서버가 본문 글자를 가져와 원문으로 쓴다.
 // PLAN 작업 10: 원문을 OpenAI에 보내 실제 분석 결과를 받는다.
-// must ①·② 규칙(작업 11·12)과 서버 규칙 검사(작업 13)는 이후 작업에서 붙인다.
+// PLAN 작업 11: must ① 요약 규칙을 지시문에 넣고, 수치 줄 출처 표시는 서버가 붙인다.
+// must ② 규칙(작업 12)과 나머지 서버 규칙 검사(작업 13)는 이후 작업에서 붙인다.
 
 import {
   ERROR_MESSAGES,
@@ -18,6 +19,7 @@ import { validateRequest } from "@/lib/validate";
 import { fetchArticle } from "@/lib/fetchArticle";
 import { callAiJson } from "@/lib/ai";
 import { ANALYSIS_SCHEMA, buildAnalysisMessages, type AiAnalysis } from "@/lib/prompts";
+import { attachSources } from "@/lib/checkRules";
 
 /** Vercel에서 이 API가 실행될 수 있는 최대 시간(초). 링크 가져오기 10초 + AI 60초를 넉넉히 덮는다 */
 export const maxDuration = 90;
@@ -61,11 +63,8 @@ export async function POST(request: Request) {
   }
 
   const result: AnalyzeResult = {
-    summary: ai.summary.map((line) => ({
-      text: line.text,
-      hasNumber: line.hasNumber,
-      sourceRef: line.sourceRef || undefined,
-    })),
+    // must ①: 수치가 있는 줄마다 서버가 출처를 붙인다 (PLAN 작업 11)
+    summary: attachSources(ai.summary, source.label),
     impact: { verdict: ai.verdict, evidence: ai.evidence, reasoning: ai.reasoning },
     source,
     warnings,
