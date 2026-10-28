@@ -1,7 +1,7 @@
 // Design Ref: §2.2 단계 7 — AI 답을 서버가 한 번 더 검사하고 바로잡는다.
 // PLAN 작업 11: must ① "수치 문장마다 출처 표시"를 AI에 맡기지 않고 서버가 직접 붙인다.
 // PLAN 작업 13: must ①·② 규칙을 서버가 검사한다. AI는 지시를 가끔 어기므로 지시문만 믿지 않는다.
-//   - 요약: 단위 표기, 원문에 없는 숫자, 5줄·60자
+//   - 요약: 단위 표기, 한국어가 아닌 줄(TEST-RESULTS L5), 원문에 없는 숫자, 5줄·60자
 //   - 근거: 원문에 그대로 있는 인용만 남기고, 2개 미만이면 "판단 보류" (PLAN 확정 사항 3)
 //   - 해설: 원문에 없는 한국 영향 문장에 "[추정]", 투자 권유 문장 제거
 
@@ -35,11 +35,18 @@ function checkSummary(lines: { text: string }[], sourceText: string, sourceLabel
   const sourceNumbers = numbersInSource(sourceText);
   let invented = 0;
   let trimmed = 0;
+  let notKorean = 0;
 
   const kept: { text: string }[] = [];
   for (const line of lines) {
     let text = normalizeUnits(line.text.trim());
     if (!text) continue;
+
+    // 번역되지 않고 영어 등으로 남은 줄은 뺀다 (요약은 한국어로 쓴다)
+    if (!isKorean(text)) {
+      notKorean++;
+      continue;
+    }
 
     // 원문에 없는 숫자가 하나라도 있으면 그 줄을 뺀다
     if (numbersIn(text).some((n) => !sourceNumbers.has(n))) {
@@ -53,6 +60,7 @@ function checkSummary(lines: { text: string }[], sourceText: string, sourceLabel
     kept.push({ text });
   }
 
+  if (notKorean) warnings.push(`한국어로 옮겨지지 않은 요약 ${notKorean}줄을 뺐습니다.`);
   if (invented) warnings.push(`원문에서 확인되지 않는 숫자가 들어간 요약 ${invented}줄을 뺐습니다.`);
   if (trimmed) warnings.push(`60자를 넘는 요약 ${trimmed}줄을 줄였습니다.`);
   if (kept.length > MAX_SUMMARY_LINES) {
@@ -60,6 +68,17 @@ function checkSummary(lines: { text: string }[], sourceText: string, sourceLabel
     kept.length = MAX_SUMMARY_LINES;
   }
   return attachSources(kept, sourceLabel);
+}
+
+/**
+ * 한국어 문장인지. 한글이 3자 이상이고, 영문 글자가 한글의 4배를 넘지 않으면 한국어로 본다.
+ * "Northwind Semiconductor 주가가 9.2% 올랐다"처럼 영어 고유명사가 긴 줄은 통과하고,
+ * 통째로 영어인 줄("The decision was made ...")만 걸러진다.
+ */
+export function isKorean(text: string): boolean {
+  const hangul = (text.match(/[가-힣]/g) ?? []).length;
+  const latin = (text.match(/[A-Za-z]/g) ?? []).length;
+  return hangul >= 3 && latin <= hangul * 4;
 }
 
 /** 영어 단위를 한국어 표기로 바꾼다. 숫자 자체는 건드리지 않는다 */
