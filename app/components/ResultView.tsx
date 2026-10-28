@@ -1,7 +1,10 @@
-// Design Ref: §5.1 — 결과 구역(8 요약, 9 영향, 10 출처).
-// PLAN 작업 5: 받은 결과를 요약·영향·출처 구역으로 나눠 보여 준다.
-// 복사하기 버튼(11)은 작업 14에서 추가한다.
+"use client";
 
+// Design Ref: §5.1 — 결과 구역(8 요약, 9 영향, 10 출처, 11 복사).
+// PLAN 작업 5: 받은 결과를 요약·영향·출처 구역으로 나눠 보여 준다.
+// PLAN 작업 14: 결과 전체를 보고서에 붙여넣기 좋은 글로 한 번에 복사한다.
+
+import { useEffect, useState } from "react";
 import type { AnalyzeResult, Source, Verdict } from "@/lib/types";
 
 interface Props {
@@ -78,8 +81,84 @@ export default function ResultView({ result }: Props) {
       <Card title="원문 출처">
         <SourceLine source={source} />
       </Card>
+
+      <CopyButton text={toReportText(result)} />
     </section>
   );
+}
+
+type CopyState = "idle" | "copied" | "failed";
+
+function CopyButton({ text }: { text: string }) {
+  const [state, setState] = useState<CopyState>("idle");
+
+  // "복사됨" 표시는 2초 뒤에 원래대로 돌린다
+  useEffect(() => {
+    if (state !== "copied") return;
+    const timer = setTimeout(() => setState("idle"), 2000);
+    return () => clearTimeout(timer);
+  }, [state]);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setState("copied");
+    } catch {
+      // 회사 PC·내장 브라우저처럼 클립보드 권한이 막힌 곳에서는 예전 방식으로 한 번 더 시도한다
+      setState(copyWithSelection(text) ? "copied" : "failed");
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        onClick={copy}
+        className="h-11 rounded-lg border border-blue-900 px-5 text-sm font-semibold text-blue-900 transition-colors hover:bg-blue-50 dark:border-blue-300 dark:text-blue-200 dark:hover:bg-blue-950"
+      >
+        {state === "copied" ? "복사됨 ✓" : "결과 복사하기"}
+      </button>
+      <p role="status" className="text-xs text-zinc-500">
+        {state === "copied" && "요약·영향 분석·출처를 복사했습니다. 보고서에 붙여넣으세요."}
+        {state === "failed" && "복사하지 못했습니다. 결과를 직접 선택해 복사해 주세요."}
+      </p>
+    </div>
+  );
+}
+
+/** 보이지 않는 글상자에 글을 넣고 선택해 복사한다 (Clipboard API를 못 쓸 때의 대안) */
+function copyWithSelection(text: string): boolean {
+  const box = document.createElement("textarea");
+  box.value = text;
+  box.setAttribute("readonly", "");
+  box.style.position = "fixed";
+  box.style.opacity = "0";
+  document.body.appendChild(box);
+  box.select();
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    box.remove();
+  }
+}
+
+/** 보고서에 바로 붙여넣을 수 있는 글 형태. 서버 경고는 앱 안내라서 넣지 않는다 */
+function toReportText({ summary, impact, source }: AnalyzeResult): string {
+  const sourceText = source.url && source.url !== source.label ? `${source.label} (${source.url})` : source.label;
+  return [
+    "■ 요약",
+    ...summary.map((line, i) => `${i + 1}. ${line.text}${line.hasNumber && line.sourceRef ? ` [출처: ${line.sourceRef}]` : ""}`),
+    "",
+    `■ 한국·우리 산업 영향: ${impact.verdict}`,
+    "근거 (원문 인용)",
+    ...impact.evidence.map((quote) => `- "${quote}"`),
+    "해설",
+    impact.reasoning,
+    "",
+    `■ 원문 출처: ${sourceText}`,
+  ].join("\n");
 }
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
