@@ -66,7 +66,9 @@ function checkSummary(lines: { text: string }[], sourceText: string, sourceLabel
 export function normalizeUnits(text: string): string {
   return text
     .replace(/(\d)\s*percentage\s+points?/gi, "$1%p")
-    .replace(/(\d)\s*(percent|per\s*cent)/gi, "$1%");
+    .replace(/(\d)\s*(percent|per\s*cent)/gi, "$1%")
+    // 범위 표기: "4.25 to 4.50%" → "4.25~4.50%"
+    .replace(/(\d[\d,.]*)\s+to\s+(\d)/gi, "$1~$2");
 }
 
 /** 날짜(9월, 15일)는 수치로 보지 않는다 (월 이름 번역은 허용) */
