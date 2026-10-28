@@ -2,7 +2,8 @@
 
 // Design Ref: §5.1 — 입력창(3), 관심 분야(5), 실행 버튼(6) 구역.
 // PLAN 작업 4: "분석하기"를 누르면 입력을 모아 부모(page)에게 넘긴다. 실제 API 호출은 page가 한다.
-// 입력 방식 전환(작업 8)과 안내 문구(작업 6)는 이후 작업에서 이 컴포넌트에 추가한다.
+// PLAN 작업 6: 입력창 아래에 공개 자료만 넣으라는 안내 문구를 둔다 (PRD 7번, DESIGN §5.1 구역 4).
+// 입력 방식 전환(작업 8)은 이후 작업에서 이 컴포넌트에 추가한다.
 
 import { useState } from "react";
 import { FIELDS, MAX_TEXT_LENGTH, type AnalyzeRequest, type Field } from "@/lib/types";
@@ -42,6 +43,7 @@ export default function AnalyzeForm({ onSubmit }: Props) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           maxLength={MAX_TEXT_LENGTH}
+          aria-describedby="public-data-notice"
           rows={10}
           placeholder="해외 금융 기사나 보고서의 원문을 붙여넣으세요."
           className="w-full resize-y rounded-lg border border-zinc-300 bg-white p-3 text-sm leading-6 focus:border-blue-700 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900"
@@ -63,6 +65,13 @@ export default function AnalyzeForm({ onSubmit }: Props) {
           className="w-full rounded-lg border border-zinc-300 bg-white p-3 text-sm focus:border-blue-700 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900"
         />
       </div>
+
+      <p
+        id="public-data-notice"
+        className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm leading-6 text-blue-950 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100"
+      >
+        <strong className="font-semibold">공개 자료만 입력하세요.</strong> 사내 기밀·유료 리포트·개인정보는 넣지 마세요.
+      </p>
 
       <div className="flex flex-col gap-2">
         <label htmlFor="field" className="text-sm font-semibold">
