@@ -4,8 +4,10 @@
 // PLAN 작업 4: 폼의 입력을 받아 /api/analyze를 부르고, 받은 결과를 결과 영역에 넘긴다.
 // PLAN 작업 7: 원문 길이를 먼저 확인해, 짧거나 길면 서버로 보내지 않고 바로 안내한다 (DESIGN §2.2 단계 2).
 // PLAN 작업 15: 분석 중 표시, 중복 요청 막기, 상황별 오류 안내와 "다시 시도" 버튼.
+// UX 개선: 분석을 시작하면 진행 안내로, 결과가 나오면 결과로 화면을 옮긴다.
+//   휴대폰에서는 결과가 화면 아래에 나타나 보이지 않아, 실패한 줄 알고 다시 누르는 일이 있었다.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ERROR_MESSAGES,
   MAX_TEXT_LENGTH,
@@ -35,6 +37,29 @@ export default function Home() {
   const [error, setError] = useState<ErrorState | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastRequest, setLastRequest] = useState<AnalyzeRequest | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  // 분석이 시작되거나 결과가 나오면 결과 영역이 보이게 옮긴다
+  useEffect(() => {
+    const area = resultRef.current;
+    if (!area || (!loading && !result)) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const outOfView = () => {
+      const top = area.getBoundingClientRect().top;
+      return top < 0 || top > window.innerHeight * 0.6;
+    };
+    // 결과가 나오면 화면 낭독기도 결과부터 읽도록 초점을 옮긴다 (화면은 다시 움직이지 않게)
+    if (result && !loading) area.focus({ preventScroll: true });
+
+    // 결과 영역 윗부분이 이미 화면 안에 있으면 움직이지 않는다
+    if (!outOfView()) return;
+    area.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    // 부드러운 스크롤이 동작하지 않는 환경(절전 모드·내장 브라우저 등)에서는 바로 이동한다
+    const fallback = window.setTimeout(() => {
+      if (outOfView()) area.scrollIntoView({ behavior: "auto", block: "start" });
+    }, 700);
+    return () => window.clearTimeout(fallback);
+  }, [loading, result]);
 
   function fail(message: string, retryable = false) {
     setResult(null);
@@ -123,7 +148,9 @@ export default function Home() {
         </div>
       )}
 
-      <ResultView result={result} loading={loading} />
+      <div ref={resultRef} tabIndex={-1} className="scroll-mt-4 outline-none">
+        <ResultView result={result} loading={loading} />
+      </div>
     </main>
   );
 }
