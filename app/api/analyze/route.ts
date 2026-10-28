@@ -2,8 +2,8 @@
 // PLAN 작업 7: 먼저 입력 길이를 검사한다.
 // PLAN 작업 9: 링크 방식이면 서버가 본문 글자를 가져와 원문으로 쓴다.
 // PLAN 작업 10: 원문을 OpenAI에 보내 실제 분석 결과를 받는다.
-// PLAN 작업 11: must ① 요약 규칙을 지시문에 넣고, 수치 줄 출처 표시는 서버가 붙인다.
-// must ② 규칙(작업 12)과 나머지 서버 규칙 검사(작업 13)는 이후 작업에서 붙인다.
+// PLAN 작업 11·12: must ①·② 규칙은 지시문(lib/prompts.ts)에 있다.
+// PLAN 작업 13: AI 답을 서버가 원문과 대조해 규칙에 맞게 바로잡는다 (lib/checkRules.ts).
 
 import {
   ERROR_MESSAGES,
@@ -19,7 +19,7 @@ import { validateRequest } from "@/lib/validate";
 import { fetchArticle } from "@/lib/fetchArticle";
 import { callAiJson } from "@/lib/ai";
 import { ANALYSIS_SCHEMA, buildAnalysisMessages, type AiAnalysis } from "@/lib/prompts";
-import { attachSources } from "@/lib/checkRules";
+import { checkAnalysis } from "@/lib/checkRules";
 
 /** Vercel에서 이 API가 실행될 수 있는 최대 시간(초). 링크 가져오기 10초 + AI 60초를 넉넉히 덮는다 */
 export const maxDuration = 90;
@@ -62,12 +62,18 @@ export async function POST(request: Request) {
     return errorResponse("AI_FAILED", 502);
   }
 
+  // must ①·②: AI 답을 원문과 대조해 규칙에 맞게 바로잡는다 (PLAN 작업 13)
+  const checked = checkAnalysis(ai, text, source.label);
+  if (!checked) {
+    // 규칙에 맞는 요약이 한 줄도 남지 않으면 결과를 보여 주지 않는다
+    return errorResponse("AI_FAILED", 502);
+  }
+
   const result: AnalyzeResult = {
-    // must ①: 수치가 있는 줄마다 서버가 출처를 붙인다 (PLAN 작업 11)
-    summary: attachSources(ai.summary, source.label),
-    impact: { verdict: ai.verdict, evidence: ai.evidence, reasoning: ai.reasoning },
+    summary: checked.summary,
+    impact: checked.impact,
     source,
-    warnings,
+    warnings: [...warnings, ...checked.warnings],
   };
   return Response.json(result);
 }
