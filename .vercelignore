@@ -1,0 +1,13 @@
+# Vercel CLI로 배포할 때 올리지 않을 파일
+# 비밀 값: 배포 환경의 키는 Vercel 프로젝트 설정의 Environment Variables에 따로 등록한다
+.env
+.env.*
+!.env.example
+
+# 기획 산출물·임시 파일 (앱 실행에 필요 없음)
+*.docx
+*.pptx
+~$*
+trash-can/
+.bkit/
+.claude/
