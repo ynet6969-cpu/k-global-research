@@ -33,6 +33,13 @@ export default function Home() {
       }
     }
 
+    // PLAN 작업 8: 링크 방식이면 http·https 주소인지 먼저 확인한다 (서버도 다시 확인한다)
+    if (request.mode === "url" && !isWebUrl(request.url)) {
+      setResult(null);
+      setError(ERROR_MESSAGES.INVALID_URL);
+      return;
+    }
+
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",
@@ -73,4 +80,13 @@ export default function Home() {
       <ResultView result={result} />
     </main>
   );
+}
+
+function isWebUrl(value: string | undefined): boolean {
+  try {
+    const { protocol } = new URL((value ?? "").trim());
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
 }
