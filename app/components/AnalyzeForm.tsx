@@ -1,13 +1,18 @@
 "use client";
 
 // Design Ref: §5.1 — 입력창(3), 관심 분야(5), 실행 버튼(6) 구역.
-// PLAN 작업 3: 화면 뼈대만 만든다. 버튼을 눌러 API를 부르는 연결은 작업 4에서 붙인다.
+// PLAN 작업 4: "분석하기"를 누르면 입력을 모아 부모(page)에게 넘긴다. 실제 API 호출은 page가 한다.
 // 입력 방식 전환(작업 8)과 안내 문구(작업 6)는 이후 작업에서 이 컴포넌트에 추가한다.
 
 import { useState } from "react";
-import { FIELDS, MAX_TEXT_LENGTH, type Field } from "@/lib/types";
+import { FIELDS, MAX_TEXT_LENGTH, type AnalyzeRequest, type Field } from "@/lib/types";
 
-export default function AnalyzeForm() {
+interface Props {
+  /** 입력을 모아 분석을 요청한다 */
+  onSubmit: (request: AnalyzeRequest) => void;
+}
+
+export default function AnalyzeForm({ onSubmit }: Props) {
   const [text, setText] = useState("");
   const [sourceLabel, setSourceLabel] = useState("");
   const [field, setField] = useState<Field>(FIELDS[0]);
@@ -17,8 +22,15 @@ export default function AnalyzeForm() {
     <form
       className="flex flex-col gap-5"
       onSubmit={(e) => {
-        // 작업 4에서 /api/analyze 호출을 연결하기 전까지는 아무 일도 하지 않는다
         e.preventDefault();
+        // 입력 방식 전환(작업 8) 전까지는 원문 붙여넣기 방식만 있다
+        onSubmit({
+          mode: "text",
+          text,
+          sourceLabel,
+          field,
+          customField: field === "직접 입력" ? customField : undefined,
+        });
       }}
     >
       <div className="flex flex-col gap-2">
