@@ -72,8 +72,78 @@ export interface AnalyzeResult {
   warnings: string[];
 }
 
+// ───────────── 종합비교 (금리·환율·경제성장률 자료를 한 번에 견주어 분석) ─────────────
+
+/** 한 번에 비교할 수 있는 자료 수 (2~3개) */
+export const MIN_COMPARE_ITEMS = 2;
+export const MAX_COMPARE_ITEMS = 3;
+/** 비교 자료 하나의 최대 길이. 자료가 여러 개라 한 건 분석(20,000자)보다 줄여 AI 요금을 지킨다 */
+export const MAX_COMPARE_TEXT_LENGTH = 10000;
+
+/** 비교할 자료 하나 */
+export interface CompareMaterial {
+  /** 이 자료의 분야 (금리·환율·경제성장률 등) */
+  field: Field;
+  /** field가 "직접 입력"일 때 적은 분야 이름 */
+  customField?: string;
+  text: string;
+  /** 출처 (선택 입력) */
+  sourceLabel?: string;
+}
+
+/** 브라우저 → 서버: POST /api/compare 요청 내용 */
+export interface CompareRequest {
+  materials: CompareMaterial[];
+}
+
+/** 비교표의 한 칸: 자료에서 뽑은 핵심 지표 */
+export interface CompareIndicator {
+  /** 몇 번째 자료인지 (1부터) */
+  material: number;
+  /** 지표 이름 (예: 기준금리, 원/달러 환율) */
+  name: string;
+  /** 원문에 적힌 수치 */
+  value: string;
+  /** 원문에 적힌 변화 (예: 동결, 0.25%p 인하). 없으면 빈 글자 */
+  change: string;
+}
+
+/** 자료들을 견준 비교 한 줄 */
+export interface CompareLine {
+  text: string;
+  hasNumber: boolean;
+  /** 이 줄이 근거로 삼은 자료 번호들 (1부터) */
+  materials: number[];
+}
+
+/** 주제별 상세 분석 한 토막 (예: 금리 동향, 환율 동향, 종합 시사점) */
+export interface CompareSection {
+  title: string;
+  body: string;
+}
+
+/** 결과에 붙는 자료 정보 */
+export interface CompareSource {
+  index: number;
+  field: string;
+  /** 출처 이름. 비어 있으면 "자료 N" */
+  source: string;
+}
+
+/** 서버 → 브라우저: 종합비교 성공 결과 */
+export interface CompareResult {
+  sources: CompareSource[];
+  indicators: CompareIndicator[];
+  comparison: CompareLine[];
+  /** 주제별 상세 분석 */
+  sections: CompareSection[];
+  impact: Impact;
+  warnings: string[];
+}
+
 /** 오류 코드 (DESIGN §6) */
 export type ErrorCode =
+  | "TOO_FEW_MATERIALS"
   | "TOO_SHORT"
   | "TOO_LONG"
   | "INVALID_URL"
@@ -84,6 +154,7 @@ export type ErrorCode =
 
 /** 오류마다 사용자에게 보여 줄 문장 (DESIGN §6). 화면과 서버가 같은 문장을 쓴다 */
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
+  TOO_FEW_MATERIALS: `비교하려면 자료를 ${MIN_COMPARE_ITEMS}개 이상 넣어 주세요.`,
   TOO_SHORT: `자료가 너무 짧습니다. ${MIN_TEXT_LENGTH}자 이상 입력해 주세요.`,
   TOO_LONG: `자료가 너무 깁니다. ${MAX_TEXT_LENGTH.toLocaleString()}자 이하로 나눠서 넣어 주세요.`,
   INVALID_URL: "올바른 링크(http 또는 https)를 입력해 주세요.",

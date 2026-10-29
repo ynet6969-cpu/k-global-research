@@ -109,7 +109,7 @@ function withoutDates(text: string): string {
 }
 
 /** 글 속 숫자를 "4.25", "1385"처럼 모은다 */
-function numbersIn(text: string): string[] {
+export function numbersIn(text: string): string[] {
   return (withoutDates(text).match(/\d[\d,]*(?:\.\d+)?/g) ?? []).map((n) => n.replace(/,/g, ""));
 }
 
@@ -121,7 +121,7 @@ const NUMBER_WORDS: Record<string, string> = {
   once: "1", twice: "2",
 };
 
-function numbersInSource(sourceText: string): Set<string> {
+export function numbersInSource(sourceText: string): Set<string> {
   const set = new Set(numbersIn(sourceText));
   for (const word of sourceText.toLowerCase().match(/[a-z]+/g) ?? []) {
     if (NUMBER_WORDS[word]) set.add(NUMBER_WORDS[word]);
@@ -151,12 +151,21 @@ function comparable(text: string): string {
   return text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-/** 매수·매도·투자 권유로 읽히는 표현 */
-const ADVICE = /매수|매도|사들이|팔아야|사야|투자\s*(를|을)?\s*권|추천|목표\s*주가|비중\s*(확대|축소)|담을\s*만/;
+/**
+ * 매수·매도·투자 권유로 읽히는 표현.
+ * "외국인 순매도", "주식 매도" 같은 사실 설명은 권유가 아니므로, 매수·매도는 권하는 말이 뒤따를 때만 막는다.
+ */
+const ADVICE =
+  /(매수|매도)(를|을)?\s*(권|추천|고려|검토|하세요|하라|해야|할\s*만|할\s*때|적기|기회|시점)|사들이|팔아야|사야|투자\s*(를|을)?\s*권|추천|목표\s*주가|비중\s*(확대|축소)|담을\s*만/;
 /** 한국 경제·시장에 대한 언급 */
 const KOREA = /한국|국내|원화|원\/달러|원·달러|원-달러|코스피|우리\s*(나라|경제|산업|기업)/;
 
-function checkImpact(ai: AiAnalysis, sourceText: string, warnings: string[]): Impact {
+// 종합비교(lib/checkCompare.ts)도 같은 영향 규칙(근거 인용·[추정]·투자 권유 제거)을 쓴다
+export function checkImpact(
+  ai: Pick<AiAnalysis, "verdict" | "evidence" | "reasoning">,
+  sourceText: string,
+  warnings: string[],
+): Impact {
   const source = comparable(sourceText);
 
   const evidence = ai.evidence.map((e) => e.trim()).filter((e) => e && source.includes(comparable(e)));
@@ -172,13 +181,9 @@ function checkImpact(ai: AiAnalysis, sourceText: string, warnings: string[]): Im
   // 원문 자체가 한국을 다루지 않으면, 한국 영향 문장은 모두 추측이다
   const sourceMentionsKorea = /korea|korean|seoul|won\b/i.test(sourceText) || KOREA.test(sourceText);
   let marked = 0;
-  let adviceRemoved = 0;
   const sentences = splitSentences(ai.reasoning).filter((s) => {
-    if (ADVICE.test(s)) {
-      adviceRemoved++;
-      return false;
-    }
-    return true;
+    // 투자 권유로 읽히는 문장은 화면 안내 없이 조용히 뺀다
+    return !ADVICE.test(s);
   });
   const reasoning = sentences
     .map((s) => {
@@ -190,10 +195,40 @@ function checkImpact(ai: AiAnalysis, sourceText: string, warnings: string[]): Im
     })
     .join(" ");
 
-  if (adviceRemoved) warnings.push(`투자 권유로 읽힐 수 있는 문장 ${adviceRemoved}개를 뺐습니다.`);
   if (marked) warnings.push(`원문에 없는 한국 영향 문장 ${marked}개에 "[추정]"을 붙였습니다.`);
 
   return { verdict, evidence, reasoning };
+}
+
+/**
+ * 상세 분석 문단(lib/checkCompare.ts)을 문장 단위로 검사한다.
+ *  - 투자 권유로 읽히는 문장은 뺀다
+ *  - 자료에 없는 숫자가 들어간 문장은 뺀다
+ *  - 자료가 한국을 다루지 않는데 한국 영향을 말하는 문장에는 "[추정]"을 붙인다
+ */
+export function cleanProse(
+  text: string,
+  sourceText: string,
+  allowedNumbers: Set<string>,
+): { text: string; marked: number; invented: number } {
+  const sourceMentionsKorea = /korea|korean|seoul|won\b/i.test(sourceText) || KOREA.test(sourceText);
+  let marked = 0;
+  let invented = 0;
+  const kept: string[] = [];
+  for (const s of splitSentences(text)) {
+    if (ADVICE.test(s)) continue;
+    if (numbersIn(s).some((n) => !allowedNumbers.has(n))) {
+      invented++;
+      continue;
+    }
+    if (!s.startsWith(GUESS_MARK) && !sourceMentionsKorea && KOREA.test(s)) {
+      marked++;
+      kept.push(`${GUESS_MARK} ${s}`);
+    } else {
+      kept.push(s);
+    }
+  }
+  return { text: kept.join(" "), marked, invented };
 }
 
 /** 한국어·영어 문장 끝(다. 요. . ! ?)에서 나눈다 */

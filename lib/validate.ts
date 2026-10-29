@@ -6,12 +6,17 @@
 import {
   ERROR_MESSAGES,
   FIELDS,
+  MAX_COMPARE_ITEMS,
+  MAX_COMPARE_TEXT_LENGTH,
   MAX_CUSTOM_FIELD_LENGTH,
   MAX_SOURCE_LABEL_LENGTH,
   MAX_TEXT_LENGTH,
+  MIN_COMPARE_ITEMS,
   MIN_TEXT_LENGTH,
   type AnalyzeError,
   type AnalyzeRequest,
+  type CompareMaterial,
+  type CompareRequest,
   type ErrorCode,
 } from "./types";
 
@@ -30,7 +35,7 @@ export function validateRequest(body: Partial<AnalyzeRequest>): AnalyzeError | n
 }
 
 /** 관심 분야는 정해진 선택지만, 직접 입력 분야와 출처는 정해진 길이 이하의 글자만 받는다 */
-function checkExtraFields(body: Partial<AnalyzeRequest>): AnalyzeError | null {
+function checkExtraFields(body: { field?: unknown; customField?: unknown; sourceLabel?: unknown }): AnalyzeError | null {
   if (!(FIELDS as readonly unknown[]).includes(body.field)) return errorOf("INVALID_INPUT");
   if (!isOptionalText(body.customField, MAX_CUSTOM_FIELD_LENGTH)) return errorOf("INVALID_INPUT");
   if (!isOptionalText(body.sourceLabel, MAX_SOURCE_LABEL_LENGTH)) return errorOf("INVALID_INPUT");
@@ -62,6 +67,27 @@ function isWebUrl(value: unknown): boolean {
   } catch {
     return false;
   }
+}
+
+// ───────────── 종합비교 입력 검사 (POST /api/compare) ─────────────
+
+/** 비교할 자료 2~3개를 검사한다. 문제가 없으면 null. 한 건 분석과 같은 기준(분야 선택지·글자 수·문자열)을 쓴다 */
+export function validateCompareRequest(body: Partial<CompareRequest>): AnalyzeError | null {
+  const materials: unknown = body.materials;
+  if (!Array.isArray(materials)) return errorOf("TOO_FEW_MATERIALS");
+  if (materials.length < MIN_COMPARE_ITEMS) return errorOf("TOO_FEW_MATERIALS");
+  if (materials.length > MAX_COMPARE_ITEMS) return errorOf("INVALID_INPUT");
+
+  for (const item of materials as Partial<CompareMaterial>[]) {
+    if (!item || typeof item !== "object") return errorOf("INVALID_INPUT");
+    const extra = checkExtraFields(item);
+    if (extra) return extra;
+
+    const length = typeof item.text === "string" ? item.text.trim().length : 0;
+    if (length < MIN_TEXT_LENGTH) return errorOf("TOO_SHORT");
+    if (length > MAX_COMPARE_TEXT_LENGTH) return errorOf("TOO_LONG");
+  }
+  return null;
 }
 
 function errorOf(code: ErrorCode): AnalyzeError {

@@ -18,6 +18,7 @@ import {
   type ErrorCode,
 } from "@/lib/types";
 import AnalyzeForm from "./components/AnalyzeForm";
+import CompareSection from "./components/CompareSection";
 import ResultView from "./components/ResultView";
 
 /** 서버 최대 실행 시간(90초)보다 조금 더 기다린다 */
@@ -32,7 +33,14 @@ interface ErrorState {
   retryable: boolean;
 }
 
+/** 화면 맨 위에서 고르는 기능: 자료 한 건 분석 / 금리·환율·경제성장 종합비교 */
+const VIEWS = [
+  { view: "single", icon: "📄", label: "자료 분석" },
+  { view: "compare", icon: "📊", label: "종합비교" },
+] as const;
+
 export default function Home() {
+  const [view, setView] = useState<(typeof VIEWS)[number]["view"]>("single");
   const [result, setResult] = useState<AnalyzeResult | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -127,6 +135,30 @@ export default function Home() {
         </p>
       </header>
 
+      <div role="tablist" aria-label="기능 선택" className="grid grid-cols-2 gap-2">
+        {VIEWS.map((v) => (
+          <button
+            key={v.view}
+            type="button"
+            role="tab"
+            aria-selected={view === v.view}
+            onClick={() => setView(v.view)}
+            className={`flex h-12 items-center justify-center gap-2 rounded-lg border text-sm font-bold transition-colors ${
+              view === v.view
+                ? "border-blue-900 bg-blue-900 text-white dark:border-blue-300 dark:bg-blue-300 dark:text-blue-950"
+                : "border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            }`}
+          >
+            <span aria-hidden>{v.icon}</span>
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {view === "compare" ? (
+        <CompareSection />
+      ) : (
+        <>
       <AnalyzeForm onSubmit={analyze} loading={loading} />
 
       {error && (
@@ -151,6 +183,8 @@ export default function Home() {
       <div ref={resultRef} tabIndex={-1} className="scroll-mt-4 outline-none">
         <ResultView result={result} loading={loading} />
       </div>
+        </>
+      )}
     </main>
   );
 }

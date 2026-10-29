@@ -6,6 +6,8 @@
 
 import { useEffect, useState } from "react";
 import type { AnalyzeResult, Source, Verdict } from "@/lib/types";
+import { analysisToReport } from "@/lib/report";
+import SaveButtons from "./SaveButtons";
 
 interface Props {
   result: AnalyzeResult | null;
@@ -14,7 +16,7 @@ interface Props {
 }
 
 /** 영향 판정마다 배지 색을 다르게 해 한눈에 구분되게 한다 */
-const VERDICT_STYLE: Record<Verdict, string> = {
+export const VERDICT_STYLE: Record<Verdict, string> = {
   긍정: "bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200",
   부정: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",
   중립: "bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100",
@@ -97,14 +99,17 @@ export default function ResultView({ result, loading }: Props) {
         <SourceLine source={source} />
       </Card>
 
-      <CopyButton text={toReportText(result)} />
+      <div className="flex flex-col items-end gap-3">
+        <SaveButtons report={analysisToReport(result)} />
+        <CopyButton text={toReportText(result)} />
+      </div>
     </section>
   );
 }
 
 type CopyState = "idle" | "copied" | "failed";
 
-function CopyButton({ text }: { text: string }) {
+export function CopyButton({ text }: { text: string }) {
   const [state, setState] = useState<CopyState>("idle");
 
   // "복사됨" 표시는 2초 뒤에 원래대로 돌린다
@@ -176,7 +181,7 @@ function toReportText({ summary, impact, source }: AnalyzeResult): string {
   ].join("\n");
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+export function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
       <h2 className="text-base font-bold text-blue-950 dark:text-blue-100">{title}</h2>
