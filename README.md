@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# K-글로벌 금융리서치
 
-## Getting Started
+해외 금융 자료(기사·보고서)를 **한국어로 요약**하고, **한국 경제와 우리 산업에 미치는 영향**을 **원문 출처와 함께** 정리해 주는 웹 앱입니다.
 
-First, run the development server:
+연구기관 연구원과 기업의 경영환경분석·사업전략 실무자가 해외 금리·환율·경제성장 동향을 조사해 보고서를 쓸 때, 수집·번역·정리에 드는 시간을 줄이는 것이 목표입니다. (자료 1건 요약 약 8시간 → 30분 이내)
+
+## 주요 기능
+
+| 기능 | 설명 |
+|---|---|
+| 한국어 요약 | 원문을 5줄 이내(한 줄 60자 이내)로 요약합니다. 원문에 없는 숫자는 쓰지 않고, 수치에는 출처를 붙입니다. |
+| 한국·산업 영향 분석 | 긍정 / 부정 / 중립 / 판단 보류 중 하나로 먼저 표시하고, 원문에서 그대로 인용한 근거를 2개 이상 보여 줍니다. 근거 없는 추측에는 "[추정]"을 붙입니다. |
+| 입력 방식 | 원문 붙여넣기, 기사·보고서 링크 1개, PDF·엑셀(.xlsx)·CSV·TXT 파일 불러오기 |
+| 종합비교 | 금리·환율·경제성장 자료 2~3개를 표로 견주고 상세 분석합니다. |
+| 보고서 저장 | 결과를 복사하거나 Word(.docx)·PowerPoint(.pptx) 파일로 저장합니다. |
+
+투자 권유(특정 종목 매수·매도 추천)는 하지 않습니다.
+
+## AI가 지켜야 할 규칙을 서버가 다시 검사합니다
+
+AI에게 지시문으로 규칙을 알려 주는 데서 그치지 않고, 서버가 답을 원문과 대조해 어긴 부분을 바로잡습니다. (`lib/checkRules.ts`, `lib/checkCompare.ts`)
+
+- 단위 표기 통일(percent → %), 한국어가 아닌 줄 제외
+- 요약 속 숫자가 원문에 실제로 있는지 확인
+- 근거 인용이 원문에 그대로 있는지 확인하고, 2개 미만이면 "판단 보류"
+- 원문이 한국을 언급하지 않으면 한국 영향 문장에 "[추정]" 표시
+- 투자 권유 문장 삭제
+
+`npm test`로 자동 시험 46개를 돌려 규칙이 지켜지는지 확인합니다.
+
+## 기술 스택
+
+- **Next.js** (화면과 서버 API를 한 프로젝트에서 처리), TypeScript, Tailwind CSS
+- **OpenAI API** (`gpt-5.4-mini`): 서버에서만 호출, 키는 환경변수로만 사용
+- pdfjs-dist (PDF 글자 읽기), docx (Word 저장), pptxgenjs (PPT 저장)
+- 배포: **Vercel**
+
+## 실행 방법
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env   # .env에 OPENAI_API_KEY 값을 채웁니다
+npm run dev            # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| 명령 | 내용 |
+|---|---|
+| `npm run lint` | 코드 검사 |
+| `npm test` | 자동 시험 46개 |
+| `npm run build` | 배포용 빌드 |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 환경변수
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| 이름 | 필수 | 설명 |
+|---|---|---|
+| `OPENAI_API_KEY` | 필수 | OpenAI API 키 (서버에서만 읽음) |
+| `OPENAI_MODEL` | 선택 | 모델 이름 (비우면 `gpt-5.4-mini`) |
 
-## Learn More
+## 보안·개인정보
 
-To learn more about Next.js, take a look at the following resources:
+- 공개 자료만 입력하세요. 사내 기밀, 유료 리포트, 개인정보는 넣지 마세요.
+- 로그인과 데이터베이스가 없고, 입력한 원문은 분석에만 쓰며 저장하지 않습니다.
+- 파일은 서버로 보내지 않고 브라우저에서만 읽어 글자를 뽑습니다.
+- 링크 입력은 내부망 주소를 막고, 요청 횟수를 제한합니다.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 문서
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| 문서 | 내용 |
+|---|---|
+| [PRD.md](PRD.md) | 기획서: 문제 정의, 목표, 사용자 흐름, 기능과 AI 규칙, 범위 |
+| [PLAN.md](PLAN.md) | 구현 계획: 성공 기준과 만든 순서대로의 작업 목록 |
+| [DESIGN.md](DESIGN.md) | 설계: 화면 구성, 데이터 흐름, 기술 선택 |
+| [CHECK.md](CHECK.md) | 점검 결과 |
+| [TEST-RESULTS.md](TEST-RESULTS.md) | 실제 AI로 돌려 본 시험 결과 |
+| [DEPLOY.md](DEPLOY.md) | 배포 준비와 점검 목록 |
 
-## Deploy on Vercel
+## 만든 사람
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+이강산 (캠코연구원 전문위원)
