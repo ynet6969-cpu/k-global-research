@@ -40,6 +40,9 @@ yarn-error.log*
 /trash-can/
 ~$*
 
+# 시험(npm test)이 lib를 컴파일해 두는 폴더
+/tests/.build/
+
 # vercel
 .vercel
 

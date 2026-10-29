@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": ".build",
+    "rootDir": "../lib",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "types": ["node"]
+  },
+  "files": [
+    "../lib/types.ts",
+    "../lib/checkRules.ts",
+    "../lib/checkCompare.ts",
+    "../lib/validate.ts",
+    "../lib/rateLimit.ts",
+    "../lib/fetchArticle.ts",
+    "../lib/report.ts"
+  ]
+}
