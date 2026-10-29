@@ -46,6 +46,8 @@ export default function AnalyzeForm({ onSubmit, loading }: Props) {
   const [field, setField] = useState<Field>(FIELDS[0]);
   const [customField, setCustomField] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
+  /** 파일 이름으로 자동 입력한 출처 값 (사용자가 직접 고쳤는지 구분하려고 기억해 둔다) */
+  const autoSource = useRef("");
   const [fileStatus, setFileStatus] = useState<{ kind: "loading" | "ok" | "error"; message: string } | null>(null);
 
   /** 고른 파일에서 글자를 뽑아 원문칸을 채운다. 출처가 비어 있으면 파일 이름을 넣는다. */
@@ -55,7 +57,12 @@ export default function AnalyzeForm({ onSubmit, loading }: Props) {
       const extracted = await readTextFromFile(file, MAX_TEXT_LENGTH);
       const cut = extracted.length > MAX_TEXT_LENGTH;
       setText(cut ? extracted.slice(0, MAX_TEXT_LENGTH) : extracted);
-      if (!sourceLabel.trim()) setSourceLabel(file.name.slice(0, MAX_SOURCE_LABEL_LENGTH));
+      // 비어 있거나 앞 파일 이름이 자동으로 들어간 출처만 새 파일 이름으로 바꾼다 (직접 적은 출처는 그대로 둔다)
+      const name = file.name.slice(0, MAX_SOURCE_LABEL_LENGTH);
+      // (상태 갱신은 나중에 실행되므로, 비교할 이전 자동 값은 먼저 따로 잡아 둔다)
+      const previousAuto = autoSource.current;
+      setSourceLabel((current) => (!current.trim() || current === previousAuto ? name : current));
+      autoSource.current = name;
       setFileStatus({
         kind: "ok",
         message: cut
